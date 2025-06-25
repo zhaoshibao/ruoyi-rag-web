@@ -1,8 +1,8 @@
 {
   "name": "ruoyi-rag-web",
-  "version": "3.9.0",
-  "description": "ruoyi-rag-web",
-  "author": "若依",
+  "version": "1.0.0",
+  "description": "AI知识库系统",
+  "author": "zhaoshibao",
   "license": "MIT",
   "type": "module",
   "scripts": {
