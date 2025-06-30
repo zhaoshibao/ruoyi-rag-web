@@ -16,7 +16,7 @@
     "url": "https://gitee.com/y_project/RuoYi-Vue.git"
   },
   "dependencies": {
-    "@element-plus/icons-vue": "2.3.1",
+    "@element-plus/icons-vue": "^2.3.1",
     "@vueup/vue-quill": "1.2.0",
     "@vueuse/core": "13.3.0",
     "axios": "1.9.0",
@@ -30,14 +30,14 @@
     "jsencrypt": "3.3.2",
     "nprogress": "0.2.0",
     "pinia": "3.0.2",
+    "prismjs": "^1.29.0",
+    "socket.io-client": "^4.8.0",
     "splitpanes": "4.0.4",
+    "uuid": "^10.0.0",
     "vue": "3.5.16",
     "vue-cropper": "1.1.1",
     "vue-router": "4.5.1",
-    "vuedraggable": "4.1.0",
-    "prismjs": "^1.29.0",
-    "socket.io-client": "^4.8.0",
-    "uuid": "^10.0.0"
+    "vuedraggable": "4.1.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "5.2.4",

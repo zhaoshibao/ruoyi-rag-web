@@ -72,6 +72,54 @@ export const constantRoutes = [
     ]
   },
   {
+  path: '/chat',
+  component: Layout,
+  children: [
+    {
+      path: 'index',
+      component: () => import('@/views/chat/Chat.vue'),
+      name: 'Chat',
+      meta: { title: '聊天记录', icon: 'chat' }
+    }
+  ]
+},
+{
+  path: '/project',
+  component: Layout,
+  children: [
+    {
+      path: 'index',
+      component: () => import('@/views/project/index.vue'),
+      name: 'Project',
+      meta: { title: '项目管理', icon: 'folder' }
+    }
+  ]
+},
+{
+  path: '/knowledge',
+  component: Layout,
+  children: [
+    {
+      path: 'index',
+      component: () => import('@/views/knowledge/index.vue'),
+      name: 'Knowledge',
+      meta: { title: '知识库管理', icon: 'education' }
+    }
+  ]
+},
+{
+  path: '/chat',
+   component: Layout,
+   children: [
+    {
+      path: 'index',
+      component: () => import('@/views/chat/Chat.vue'),
+      name: 'Chat',
+      meta: { title: '会话管理' }
+    }
+   ]
+},
+  {
     path: '/user',
     component: Layout,
     hidden: true,

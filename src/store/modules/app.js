@@ -5,7 +5,8 @@ const useAppStore = defineStore(
   {
     state: () => ({
       sidebar: {
-        opened: Cookies.get('sidebarStatus') ? !!+Cookies.get('sidebarStatus') : true,
+        // 修改初始状态为 false，表示侧边栏默认折叠
+        opened: Cookies.get('sidebarStatus') ? !!+Cookies.get('sidebarStatus') : false,
         withoutAnimation: false,
         hide: false
       },

@@ -1,8 +1,16 @@
 <template>
   <el-container class="chat-page">
-    <el-aside :width="sidebarWidth" class="chat-aside">
-      <chat-list @toggle-sidebar="handleToggleSidebar" ref="chatListRef" />
+    <el-aside :class="['chat-aside', { 'is-collapsed': isChatListCollapsed }]" :style="{ width: isChatListCollapsed ? '0' : sidebarWidth }">
+        <chat-list
+          ref="chatListRef"
+          @select-chat="handleSelectChat"
+        />
     </el-aside>
+    <div class="collapse-button" @click="handleChatListCollapse">
+      <el-icon :class="{ 'is-collapse': isChatListCollapsed }">
+        <CaretLeft />
+      </el-icon>
+    </div>
     <el-container class="main-container">
       <el-main class="chat-main">
         <message-list :messages="messages" />
@@ -32,17 +40,31 @@
         </div>
       </el-footer>
     </el-container>
+    
+    <!-- 用户设置对话框 -->
+    <user-settings v-model:visible="settingsVisible" @save-settings="handleSaveSettings" />
   </el-container>
 </template>
 
 <script>
-import { ref, watch, onUnmounted } from 'vue';
+import { ref, watch, onUnmounted, nextTick, markRaw } from 'vue';
+import { CaretLeft } from '@element-plus/icons-vue';
+import useAppStore from '@/store/modules/app';
 import ChatInput from '@/components/Chat/ChatInput.vue';
 import MessageList from '@/components/Chat/MessageList.vue';
 import ChatList from '@/components/Chat/ChatList.vue';
+import SidebarMenu from '@/components/Chat/SidebarMenu.vue';
+import ProjectList from '@/components/Chat/ProjectList.vue';
+import KnowledgeList from '@/components/Chat/KnowledgeList.vue';
+import UserSettings from '@/components/Chat/UserSettings.vue';
 import { useChatStore } from '@/store/chat';
 import { Close } from '@element-plus/icons-vue';
 import ModelSelect from "@/components/Chat/ModelSelect.vue";
+
+// 使用markRaw避免组件被代理
+const ChatListRaw = markRaw(ChatList);
+const ProjectListRaw = markRaw(ProjectList);
+const KnowledgeListRaw = markRaw(KnowledgeList);
 
 export default {
   components: {
@@ -51,14 +73,38 @@ export default {
     Close,
     ModelSelect,
     ChatList,
+    SidebarMenu,
+    ProjectList,
+    KnowledgeList,
+    UserSettings,
   },
   setup() {
+    const appStore = useAppStore();
     const chatStore = useChatStore();
     const messages = ref(chatStore.messages);
     const useSSEMode = ref(chatStore.useSSE);
-    const sidebarWidth = ref('390px'); // 将初始宽度设置为 400px
+    const sidebarWidth = ref('300px');
     const chatListRef = ref(null);
+    const activeMenu = ref('chat');
+    const settingsVisible = ref(false);
     
+    // 使用 appStore 的 sidebar.opened 状态，注意要用 computed 使其成为响应式，并且取反
+    // 使用独立的状态控制聊天记录列表的显示
+    const isChatListCollapsed = ref(false);
+    
+    // 使用 appStore 的 sidebar.opened 状态
+    const isCollapse = computed(() => !appStore.sidebar.opened);
+
+    // 只控制聊天记录列表的展开/收起
+    const handleChatListCollapse = () => {
+      isChatListCollapsed.value = !isChatListCollapsed.value;
+    };
+
+    // 使用 appStore 的 toggleSideBar 方法
+    const toggleCollapse = () => {
+      appStore.toggleSideBar();
+    };
+
     // SSE连接管理
     let currentEventSource = null;
 
@@ -174,8 +220,39 @@ export default {
     });
 
     // 处理侧边栏折叠/展开
-    const handleToggleSidebar = (isHidden) => {
-      sidebarWidth.value = isHidden ? '50px' : '400px'; // 将展开宽度设置为 400px
+    const handleToggleSidebar = () => {
+      isHidden.value = !isHidden.value;
+      sidebarWidth.value = isHidden.value ? '60px' : '300px'; // 将展开宽度设置为 300px
+    };
+    
+    // 处理菜单切换
+    const handleMenuChange = (menu) => {
+      console.log('切换到菜单:', menu);
+      // 更新激活菜单
+      activeMenu.value = menu;
+      
+      // 强制重新渲染组件
+      nextTick(() => {
+        console.log('当前激活的菜单:', activeMenu.value);
+      });
+    };
+    
+    // 处理项目选择
+    const handleSelectProject = (project) => {
+      console.log('选择项目:', project);
+      // 这里可以添加选择项目后的逻辑
+    };
+    
+    // 处理知识库选择
+    const handleSelectKnowledge = (knowledge) => {
+      console.log('选择知识库:', knowledge);
+      // 这里可以添加选择知识库后的逻辑
+    };
+    
+    // 处理保存用户设置
+    const handleSaveSettings = (settings) => {
+      console.log('保存用户设置:', settings);
+      // 这里可以添加保存用户设置后的逻辑
     };
 
     return { 
@@ -187,7 +264,17 @@ export default {
       stopSending,
       sidebarWidth,
       chatListRef,
-      handleToggleSidebar
+      activeMenu,
+      settingsVisible,
+      handleMenuChange,
+      handleSelectProject,
+      handleSelectKnowledge,
+      handleSaveSettings,
+      isCollapse,
+      toggleCollapse,
+      isChatListCollapsed,
+      handleChatListCollapse
+
     };
   },
 };
@@ -205,6 +292,57 @@ export default {
   background-color: #fff;
   transition: width 0.3s;
   overflow: hidden; /* 防止侧边栏出现横向滚动条 */
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-content {
+  flex: 1;
+  background-color: #f5f7fa;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-wrapper > * {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.fade-enter-from {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.fade-leave-to {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+.fade-enter-to,
+.fade-leave-from {
+  opacity: 1;
+  transform: translateX(0);
 }
 
 .main-container {
@@ -250,5 +388,84 @@ export default {
 
 .sending-controls {
   margin-top: 10px;
+}
+
+.collapse-button {
+  position: absolute;
+  left: 300px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 50px;
+  background-color: #f2f2f2;
+  border-radius: 0 4px 4px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  z-index: 10;
+}
+
+.collapse-button:hover {
+  background-color: #e6e6e6;
+}
+
+.collapse-button .el-icon {
+  transition: transform 0.3s;
+}
+
+.collapse-button .is-collapse {
+  transform: rotate(180deg);
+}
+
+/* 当侧边栏收起时，调整按钮位置 */
+.is-collapsed + .collapse-button {
+  left: 0;
+}
+
+.chat-aside {
+  transition: all 0.3s;
+  overflow: hidden;
+  position: relative;
+}
+
+.chat-aside.is-collapsed {
+  padding: 0;
+  margin: 0;
+}
+
+.collapse-button {
+  position: absolute;
+  left: 300px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 50px;
+  background-color: #f2f2f2;
+  border-radius: 0 4px 4px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  z-index: 10;
+}
+
+.collapse-button:hover {
+  background-color: #e6e6e6;
+}
+
+.collapse-button .el-icon {
+  transition: transform 0.3s;
+}
+
+.collapse-button .is-collapse {
+  transform: rotate(180deg);
+}
+
+/* 当侧边栏收起时，调整按钮位置 */
+.is-collapsed + .collapse-button {
+  left: 0;
 }
 </style>

@@ -1,26 +1,52 @@
 <template>
   <div :class="{ 'has-logo': showLogo }" class="sidebar-container">
-    <logo v-if="showLogo" :collapse="isCollapse" />
-    <el-scrollbar wrap-class="scrollbar-wrapper">
+    <!-- 导航菜单 -->
+    <div class="sidebar-menu">
       <el-menu
-        :default-active="activeMenu"
         :collapse="isCollapse"
         :background-color="getMenuBackground"
         :text-color="getMenuTextColor"
-        :unique-opened="true"
         :active-text-color="theme"
         :collapse-transition="false"
         mode="vertical"
         :class="sideTheme"
+        router
       >
-        <sidebar-item
-          v-for="(route, index) in sidebarRouters"
-          :key="route.path + index"
-          :item="route"
-          :base-path="route.path"
-        />
+        <el-menu-item index="/chat/index">
+          <el-icon><ChatLineRound /></el-icon>
+          <template #title>聊天记录</template>
+        </el-menu-item>
+        <el-menu-item index="/project/index">
+          <el-icon><Folder /></el-icon>
+          <template #title>项目管理</template>
+        </el-menu-item>
+        <el-menu-item index="/knowledge/index">
+          <el-icon><Files /></el-icon>
+          <template #title>知识库管理</template>
+        </el-menu-item>
       </el-menu>
-    </el-scrollbar>
+    </div>
+    
+    <!-- 用户信息 -->
+    <div class="sidebar-user" :class="{ 'is-collapse': isCollapse }">
+      <el-dropdown trigger="click" @command="handleCommand">
+        <div class="user-info">
+          <el-avatar :size="32" src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png" />
+          <span v-if="!isCollapse" class="username">{{ userStore.name }}</span>
+        </div>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="settings">
+              <el-icon><Setting /></el-icon>个人设置
+            </el-dropdown-item>
+            <el-dropdown-item divided command="logout">
+              <el-icon><SwitchButton /></el-icon>退出登录
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+    </div>
+    <user-profile-dialog v-model:visible="showProfileDialog" />
   </div>
 </template>
 
@@ -31,7 +57,13 @@ import variables from '@/assets/styles/variables.module.scss'
 import useAppStore from '@/store/modules/app'
 import useSettingsStore from '@/store/modules/settings'
 import usePermissionStore from '@/store/modules/permission'
+import { Setting, SwitchButton } from '@element-plus/icons-vue'
+import useUserStore from '@/store/modules/user'
+import UserProfileDialog from '@/components/UserProfile/UserProfileDialog.vue'
+import { ChatLineRound, Folder, Files } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const route = useRoute()
 const appStore = useAppStore()
 const settingsStore = useSettingsStore()
@@ -66,39 +98,99 @@ const activeMenu = computed(() => {
   }
   return path
 })
+
+const userStore = useUserStore()
+const showProfileDialog = ref(false)
+
+// 处理下拉菜单命令
+const handleCommand = (command) => {
+  if (command === 'settings') {
+    showProfileDialog.value = true
+  } else if (command === 'logout') {
+    // 退出登录
+    userStore.logout()
+  }
+}
 </script>
 
 <style lang="scss" scoped>
 .sidebar-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   background-color: v-bind(getMenuBackground);
-  
-  .scrollbar-wrapper {
-    background-color: v-bind(getMenuBackground);
-  }
+}
 
+.sidebar-menu {
+  flex: 1;
+  overflow-y: auto;
+  
   .el-menu {
     border: none;
-    height: 100%;
-    width: 100% !important;
     
-    .el-menu-item, .el-sub-menu__title {
-      &:hover {
+    .el-menu-item {
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      height: 50px;
+      
+      .el-icon {
+        font-size: 18px;
+        margin-right: 12px;
+      }
+      
+      &:hover, &.is-active {
         background-color: var(--menu-hover, rgba(0, 0, 0, 0.06)) !important;
       }
-    }
-
-    .el-menu-item {
-      color: v-bind(getMenuTextColor);
       
       &.is-active {
         color: var(--menu-active-text, #409eff);
-        background-color: var(--menu-hover, rgba(0, 0, 0, 0.06)) !important;
       }
     }
+  }
+}
 
-    .el-sub-menu__title {
-      color: v-bind(getMenuTextColor);
+.sidebar-user {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  background-color: v-bind(getMenuBackground);
+  transition: all 0.3s;
+  
+  &.is-collapse {
+    padding: 12px;
+    
+    .user-info {
+      justify-content: center;
     }
+  }
+  
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    
+    .username {
+      color: v-bind(getMenuTextColor);
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+}
+
+:deep(.el-dropdown-menu__item) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  
+  .el-icon {
+    margin-right: 4px;
   }
 }
 </style>

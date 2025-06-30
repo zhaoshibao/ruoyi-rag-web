@@ -1,7 +1,11 @@
 <template>
-  <div class="sidebar-box" :class="isHidden.value ? 'sidebar-hidden' : 'sidebar-show'">
-    <MenuBox :isHidden="isHidden" @toggle-sidebar="toggleSidebar" />
-    <div class="sidebar" v-if="!isHidden.value">
+  <div class="chat-list-container">
+    <div class="chat-list-header">
+      <el-button type="primary" size="small" @click="createNewChat" class="new-chat-btn">
+        <el-icon><Plus /></el-icon> 新建会话
+      </el-button>
+    </div>
+    <div class="chat-list-content">
       <div v-for="(group, date) in groupedChats" :key="date" class="chat-group">
         <div class="date-label">
           <span>{{ date }}</span>
@@ -10,7 +14,7 @@
         <div v-for="chat in group" :key="chat.chatId" 
           @click="selectMenu(chat.chatId)"
           :class="{ 'active': activeMenu === chat.chatId }" 
-          class="sidebar-item">
+          class="chat-item">
           <div class="chat-title">
             <el-icon><ChatDotRound /></el-icon>
             <template v-if="activeMenu === chat.chatId && chat.editing">
@@ -36,32 +40,12 @@
         </div>
       </div>
     </div>
-    <!-- 移除这部分，因为我们已经在MenuBox中添加了展开按钮 -->
-    <!-- <div v-if="isHidden.value" class="mini-sidebar">
-      <el-tooltip content="展开侧边栏" placement="right">
-        <div class="toggle-icon" @click="toggleSidebar">
-          <el-icon><ArrowRight /></el-icon>
-        </div>
-      </el-tooltip>
-      <div class="mini-actions">
-        <el-tooltip content="新建会话" placement="right">
-          <el-button 
-            type="primary" 
-            circle 
-            size="small" 
-            @click="createNewChat">
-            <el-icon><Plus /></el-icon>
-          </el-button>
-        </el-tooltip>
-      </div>
-    </div> -->
   </div>
 </template>
 
 <script>
 import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue';
-import { EditPen, Delete, ArrowRight, ChatDotRound, Plus } from "@element-plus/icons-vue";
-import MenuBox from "./MenuBox.vue";
+import { EditPen, Delete, ChatDotRound, Plus } from "@element-plus/icons-vue";
 import { listChats, updateChat, deleteChat as deleteChatApi } from "@/api/chat/chat";
 import { useChatStore } from '@/store/chat';
 
@@ -69,8 +53,6 @@ export default {
   components: {
     EditPen,
     Delete,
-    MenuBox,
-    ArrowRight,
     ChatDotRound,
     Plus
   },
@@ -223,31 +205,30 @@ export default {
 </script>
 
 <style scoped>
-.sidebar-box {
-  height: 100vh;
+.chat-list-container {
+  height: 100%;
   display: flex;
   flex-direction: column;
-  transition: all 0.3s ease;
-}
-
-.sidebar-show {
-  width: 400px; /* 将宽度从 300px 增加到 400px */
-  border-right: 1px solid #ebeef5;
   background-color: #fff;
 }
 
-.sidebar-hidden {
-  width: 50px;
-  border-right: 1px solid #ebeef5;
+.chat-list-header {
+  padding: 16px;
+  border-bottom: 1px solid #ebeef5;
   background-color: #fff;
 }
 
-.sidebar {
+.new-chat-btn {
+  width: 100%;
+  max-width: 180px;
+  height: 32px;
+}
+
+.chat-list-content {
   flex: 1;
   overflow-y: auto;
   padding: 0;
   margin: 0;
-  width: 400px; /* 将宽度从 300px 增加到 400px */
 }
 
 .chat-group {
@@ -271,7 +252,7 @@ export default {
   margin: 8px 0;
 }
 
-.sidebar-item {
+.chat-item {
   padding: 10px 16px;
   cursor: pointer;
   display: flex;
@@ -280,10 +261,9 @@ export default {
   border-radius: 4px;
   margin: 0 8px;
   transition: all 0.2s ease;
-  width: 350px;
 }
 
-.sidebar-item:hover {
+.chat-item:hover {
   background-color: #f5f7fa;
 }
 
