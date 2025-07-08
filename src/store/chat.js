@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { sendMessage, sendMessageV2, createChat, listMessages, listChats, saveMessage } from '@/api/chat/chat';
 import Prism from 'prismjs';
 import { v4 as uuidv4 } from 'uuid';
+import { marked } from 'marked';
 
 export const useChatStore = defineStore('chat', {
   state: () => ({
@@ -67,24 +68,32 @@ export const useChatStore = defineStore('chat', {
 
     // 格式化消息
     formatMessage(message) {
+      console.log('=================格式化消息方法——>原始消息:===============', message);
       const codeBlockMatches = [];
+      
+      // 1. 先处理代码块，避免 marked 解析代码块
       let formattedMessage = message.replace(/```(?:\s*(\w+))?\n([\s\S]*?)```/g, (match, language, codeContent, index) => {
         const lang = (language || 'plaintext').trim();
         codeBlockMatches.push({ codeContent, lang });
         return `__CODE_BLOCK_${codeBlockMatches.length - 1}__`;
       });
-      formattedMessage = formattedMessage.replace(/\n/g, '<br>');
-
+      
+      // 2. 使用 marked 处理其他 Markdown 语法
+      formattedMessage = marked.parse(formattedMessage);
+      
+      // 3. 恢复代码块并应用语法高亮
       codeBlockMatches.forEach((block, index) => {
-        const codeBlockHTML = `
-          <div class="code-block">
-            <pre><code class="language-${block.lang}">${block.codeContent}</code></pre>
-          </div>
-        `;
-        formattedMessage = formattedMessage.replace(`__CODE_BLOCK_${index}__`, codeBlockHTML);
+        const highlightedCode = Prism.highlight(
+          block.codeContent.trim(),
+          Prism.languages[block.lang] || Prism.languages.plaintext,
+          block.lang
+        );
+        formattedMessage = formattedMessage.replace(
+          `__CODE_BLOCK_${index}__`,
+          `<pre><code class="language-${block.lang}">${highlightedCode}</code></pre>`
+        );
       });
-
-      console.log(formattedMessage);
+      
       return formattedMessage;
     },
 
