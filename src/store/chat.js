@@ -151,7 +151,14 @@ export const useChatStore = defineStore('chat', {
       this.currentAbortController = new AbortController();
       
       try {
-        const thinkingMessage = { sender: 'chatgpt', text: "努力思考中，请稍后", isThinking: true };
+        // 生成唯一的消息ID
+        const messageId = Date.now();
+        const thinkingMessage = { 
+          sender: 'chatgpt', 
+          text: "努力思考中，请稍后...", 
+          isThinking: true,
+          id: messageId
+        };
         this.addMessage(thinkingMessage);
         
         const messagePayload = {
@@ -160,16 +167,6 @@ export const useChatStore = defineStore('chat', {
           chatId: this.chatId,
           ...userMessage,
         };
-        
-        this.messages.splice(this.messages.length - 1, 1);
-        
-        const chatGptReply = { 
-          sender: 'chatgpt', 
-          text: '', 
-          isTyping: true,
-          isStreaming: true 
-        };
-        this.addMessage(chatGptReply);
         
         const response = await fetch('/api/ai/chat-stream', {
           method: 'POST',
@@ -184,6 +181,26 @@ export const useChatStore = defineStore('chat', {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         console.log('/api/ai/chat-stream response.body', response.body);
+        
+        // 创建新的回复消息，使用相同的ID
+        const chatGptReply = { 
+          sender: 'chatgpt', 
+          text: '', 
+          isTyping: true,
+          isStreaming: true,
+          id: messageId  // 使用相同的ID
+        };
+        
+        // 使用ID查找并替换思考中的消息
+        const thinkingIndex = this.messages.findIndex(msg => msg.id === messageId);
+        if (thinkingIndex !== -1) {
+          this.messages.splice(thinkingIndex, 1, chatGptReply);
+          // 确保Vue更新视图
+          this.messages = [...this.messages];
+        } else {
+          this.addMessage(chatGptReply);
+        }
+
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';

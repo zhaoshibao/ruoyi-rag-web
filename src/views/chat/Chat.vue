@@ -15,7 +15,7 @@
       <el-main class="chat-main">
         <message-list :messages="messages" />
       </el-main>
-      <el-footer class="chat-footer">
+      <el-footer class="chat-footer" :class="{ 'is-collapsed': isChatListCollapsed }">
         <div class="input-container">
           <chat-input @send="handleSendMessage" :disabled="chatStore.isSending">
             <template #left>
@@ -182,7 +182,8 @@
   padding: 20px 0;
   overflow-x: hidden; /* 禁止横向滚动 */
   overflow-y: auto; /* 允许纵向滚动 */
-  height: calc(100vh - 120px); /* 减去头部和底部的高度 */
+  height: calc(100vh - 180px); /* 调整高度，为底部留出更多空间 */
+  padding-bottom: 100px; /* 增加底部内边距，防止最后的消息被输入框遮挡 */
 }
 
 .chat-footer {
@@ -194,8 +195,8 @@
   justify-content: center;
   align-items: center;
   background-color: #fff;
-  padding: 20px 0;
-  border-top: 1px solid #f0f0f0;
+  padding: 10px 0;
+  /* box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05); 添加轻微阴影，提升层次感 */
 }
 
 .input-container {
@@ -203,7 +204,8 @@
   align-items: center;
   gap: 15px;
   width: 100%;
-  max-width: 800px;
+  max-width: 1000px;
+  margin-bottom: 60px; /* 减小底部边距 */
 }
 
 .mode-switch {

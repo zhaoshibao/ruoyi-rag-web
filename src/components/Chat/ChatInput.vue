@@ -156,7 +156,7 @@ const toggleWebSearch = (value) => {
   background-color: #ffffff;
   font-size: 16px;
   line-height: 1.5;
-  min-height: 40px;
+  min-height: 50px;
   max-height: 120px;
   overflow-y: auto;
   white-space: pre-wrap;
