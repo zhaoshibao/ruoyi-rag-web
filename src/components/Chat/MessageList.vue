@@ -1,55 +1,75 @@
 <template>
-  <ul class="message-list" ref="messaggListRef">
+  <ul class="message-list" ref="messageListRef">
     <li :class="message.sender === 'user' ? 'ask' : 'answer'" v-for="(message, index) in messages" :key="index">
       <div :class="message.sender === 'user' ? 'askIcon' : 'answerIcon'">
         <el-icon v-if="message.sender === 'user'">
           <User />
         </el-icon>
         <el-icon v-else>
-          <img v-if="message.text == '努力思考中，请稍后'" src="../assets/loading.gif" alt="" width="70px"
-            style="background-color: transparent;">
-          <Service v-else />
+          <!-- <img v-if="message.text == '努力思考中，请稍后'" src="../assets/loading.gif" alt="" width="70px"
+            style="background-color: transparent;"> -->
+
+          <Service/>
         </el-icon>
       </div>
-      <div :class="message.sender === 'user' ? 'askContent' : 'answerContent'" v-html="message.text">
-      </div>
+      <!-- <div :class="message.sender === 'user' ? 'askContent' : 'answerContent'" v-html="message.text">
+      </div> -->
+      <MdPreview  ref="editorRef"
+        editorId="preview-only"
+        previewTheme="github"
+        :showCodeRowNumber="false"
+        :modelValue="message.text"
+        :key="message.id"
+        />
+
       <span v-if="message.isTyping" class="cursor">_</span>
     </li>
   </ul>
 </template>
 
-<script>
-import { ChatLineRound, Bottom, ChatSquare, User, Link, Position, Service } from "@element-plus/icons-vue"
-import { onMounted, watch, ref } from "vue";
-export default {
-  //   props: {
-  //     messages: {
-  //       type: Array,
-  //       default: () => [],
-  //     },
-  //   },
-
-};
-</script>
-
-
 <script setup>
-const messaggListRef = ref()
-const scrollTop = ref()
-const props = defineProps(["messages"])
+import { onMounted, watch, ref, nextTick, onBeforeUnmount } from "vue";
+
+import { MdPreview } from 'md-editor-v3'
+import 'md-editor-v3/lib/preview.css';
+
+const messageListRef = ref(null);
+const props = defineProps(["messages"]);
+const shouldAutoScroll = ref(true);
+
+const scrollToBottom = async () => {
+  if (messageListRef.value && shouldAutoScroll.value) {
+    await nextTick();
+    messageListRef.value.scrollTop = messageListRef.value.scrollHeight;
+  }
+};
+
+// 检测用户是否手动滚动
+const handleScroll = () => {
+  if (!messageListRef.value) return;
+  
+  const element = messageListRef.value;
+  const { scrollTop, scrollHeight, clientHeight } = element;
+  // 如果用户向上滚动超过200px，则停止自动滚动
+  shouldAutoScroll.value = scrollHeight - scrollTop - clientHeight < 200;
+};
 
 onMounted(() => {
-  setInterval(() => {
-    scrollTop.value = messaggListRef.value.scrollHeight
-  }, 300);
-})
+  scrollToBottom();
+  // 添加滚动事件监听
+  messageListRef.value?.addEventListener('scroll', handleScroll);
+});
 
-watch(scrollTop, () => {
-  messaggListRef.value.scrollTop = messaggListRef.value.scrollHeight
-})
+onBeforeUnmount(() => {
+  // 移除滚动事件监听
+  messageListRef.value?.removeEventListener('scroll', handleScroll);
+});
 
+// 监听消息变化自动滚动到底部
+watch(() => props.messages, () => {
+  scrollToBottom();
+}, { deep: true });
 
-// watch
 </script>
 
 <style scoped>
@@ -149,6 +169,52 @@ li.answer {
     max-width: 80%; /* 限制消息内容宽度 */
     word-wrap: break-word; /* 允许长单词换行 */
     overflow-wrap: break-word; /* 现代浏览器的长单词换行 */
+  }
+}
+
+
+.message-md .md-editor-preview-wrapper {
+  color: var(--gray-900);
+  max-width: 100%;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans SC', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', 'Hiragino Sans GB', 'Source Han Sans CN', 'Courier New', monospace;
+
+  #preview-only-preview {
+    font-size: 15px;
+  }
+
+  h1, h2 {
+    font-size: 1.2rem;
+  }
+
+  h3, h4 {
+    font-size: 1.1rem;
+  }
+
+  h5, h6 {
+    font-size: 1rem;
+  }
+
+  // li > p, ol > p, ul > p {
+  //   margin: 0.25rem 0;
+  // }
+
+  // ol, ul {
+  //   padding-left: 1rem;
+  // }
+
+  a {
+    color: var(--main-700);
+  }
+
+  code {
+    font-size: 13px;
+    font-family: 'Menlo', 'Monaco', 'Consolas', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', 'Hiragino Sans GB', 'Source Han Sans CN', 'Courier New', monospace;
+    line-height: 1.5;
+    letter-spacing: 0.025em;
+    tab-size: 4;
+    -moz-tab-size: 4;
+    background-color: var(--gray-100);
   }
 }
 </style>

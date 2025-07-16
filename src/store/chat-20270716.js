@@ -147,122 +147,127 @@ export const useChatStore = defineStore('chat', {
      * @returns {Promise<string>} 返回ChatGPT的完整响应消息
      */
     async sendMessageTraditional(userMessage) {
-      console.log('使用流式模式发送消息:', userMessage);
+      console.log('使用传统模式发送消息:', userMessage);
+      // 创建新的AbortController用于支持取消请求
       this.currentAbortController = new AbortController();
       
       try {
+        // 添加一个临时的"思考中"消息，提供更好的用户体验
         const thinkingMessage = { sender: 'chatgpt', text: "努力思考中，请稍后", isThinking: true };
         this.addMessage(thinkingMessage);
         
+        // 构建发送给后端的消息载荷
         const messagePayload = {
           projectId: this.projectId,
           language: 0,
-          chatId: this.chatId,
           ...userMessage,
         };
         
+        // 发送请求并等待响应
+        const response = await sendMessage(messagePayload, this.currentAbortController);
+        
+        // 如果请求已被取消，直接返回
+        if (this.currentAbortController?.signal.aborted) {
+          console.log('请求已被取消');
+          return;
+        }
+        
+        // 移除临时的"思考中"消息
         this.messages.splice(this.messages.length - 1, 1);
         
-        const chatGptReply = { 
-          sender: 'chatgpt', 
-          text: '', 
-          isTyping: true,
-          isStreaming: true 
-        };
+        // 获取ChatGPT的响应消息
+        const chatGptMessage = response.data;
+
+        console.log('=== ChatGPT回复 ===', chatGptMessage);
+        const chatGptReply = { sender: 'chatgpt', text: '', isTyping: true, isThinking: true };
         this.addMessage(chatGptReply);
         
-        const response = await fetch('/api/ai/chat-stream', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(messagePayload),
-          signal: this.currentAbortController.signal
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        console.log('/api/ai/chat-stream response.body', response.body);
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let fullMessage = '';
-        let currentCodeBlock = {
-          isInBlock: false,
-          language: '',
-          content: ''
-        };
-        
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) {
-              // 处理缓冲区中剩余的数据
-              if (buffer) {
-                const lines = buffer.split('\n');
-                for (const line of lines) {
-                  if (line.trim() && line.startsWith('data: ')) {
-                    await this.processStreamData(line.slice(6), chatGptReply, currentCodeBlock);
-                  }
-                }
-              }
-              break;
-            }
-            
-            // 如果请求已被取消，停止处理
-            if (this.currentAbortController?.signal.aborted) {
-              console.log('请求已被取消');
-              return;
-            }
-
-            const chunk = decoder.decode(value, { stream: true });
-           
-            buffer += chunk;
-            console.log('buffer===============', buffer);
-            // 尝试处理buffer中的数据
-            try {
-              const content = await this.processStreamData(buffer, chatGptReply, currentCodeBlock);
-              console.log('content===============', content);
-              if (content) {
-                fullMessage += content;
-                // 清空已处理的buffer
-                buffer = '';
-              }
-            } catch (e) {
-              console.log('处理数据出错，继续累积buffer:', e);
-            }
-            
-          }
-        } catch (error) {
-          console.error('处理流数据时出错:', error);
-          throw error;
-        } finally {
-          // 确保读取器被正确关闭
-          reader.releaseLock();
-        }
-        
-        // 保存完整消息到后端
+        // 保存消息到后端
         try {
           await saveMessage({
             "chatId": this.chatId,
-            "content": fullMessage
+            "content": chatGptMessage
           }, this.currentAbortController);
         } catch (error) {
           console.error('保存消息失败:', error);
         }
         
-        // 收尾逻辑：重置状态标志
-        chatGptReply.isThinking = false;
-        chatGptReply.isTyping = false;
-        chatGptReply.isStreaming = false;
-        this.isSending = false;
-        this.currentAbortController = null;
-        this.messages = [...this.messages];
+        // 如果请求已被取消，不继续处理
+        if (this.currentAbortController?.signal.aborted) {
+          console.log('保存消息请求已被取消');
+          return;
+        }
         
-        return fullMessage;
+        // 处理消息中的代码块，使用正则表达式匹配 ```language\n code ``` 格式的代码块
+        const codeRegex = /```(\w+)?\n([\s\S]*?)```/g;
+        let lastIndex = 0;  // 记录上一次匹配结束的位置
+        let match;
+        
+        // 循环查找所有代码块
+        while ((match = codeRegex.exec(chatGptMessage)) !== null) {
+          // 如果请求已被取消，不继续处理
+          if (this.currentAbortController?.signal.aborted) {
+            console.log('显示过程已被取消');
+            return;
+          }
+          
+          // 解构匹配结果：
+          // fullMatch: 完整的匹配文本
+          // language: 代码语言（可能为undefined）
+          // codeContent: 代码内容
+          const [fullMatch, language, codeContent] = match;
+
+          // 获取当前代码块之前的普通文本
+          const nonCodeText = chatGptMessage.slice(lastIndex, match.index);
+          if (nonCodeText) {
+            // 如果存在普通文本，使用打字机效果显示
+            await this.outputMessagePart(nonCodeText, chatGptReply);
+          }
+          
+          // 添加代码块的HTML标记，设置语言类型（如果未指定则使用plaintext）
+          chatGptReply.text += `<pre><code class="language-${language || 'plaintext'}">`;
+          this.messages = [...this.messages];  // 触发Vue的响应式更新
+          
+          // 使用打字机效果显示代码内容
+          await this.outputMessagePart(codeContent, chatGptReply);
+          
+          // 添加代码块的闭合标签
+          chatGptReply.text += `</code></pre>`;
+          this.messages = [...this.messages];  // 触发Vue的响应式更新
+          
+          // 更新lastIndex为当前匹配结束的位置，为下一次匹配做准备
+          lastIndex = codeRegex.lastIndex;
+        }
+        
+        if (lastIndex < chatGptMessage.length) {
+          const remainingText = chatGptMessage.slice(lastIndex);
+          await this.outputMessagePart(remainingText, chatGptReply);
+        }
+        
+        // 如果请求已被取消，不继续处理
+        if (this.currentAbortController?.signal.aborted) {
+          console.log('最终处理已被取消');
+          return;
+        }
+        
+        // 使用setTimeout确保在下一个事件循环中应用代码高亮
+        // 这样可以确保DOM已经更新完成
+        setTimeout(() => {
+          Prism.highlightAll();
+        }, 0);
+        
+        // 收尾逻辑：重置状态标志、清除请求控制器和更新消息列表
+        chatGptReply.isThinking = false;  // 结束思考状态
+        chatGptReply.isTyping = false;    // 结束打字状态
+        this.isSending = false;           // 结束发送状态
+        this.currentAbortController = null;  // 清除请求控制器
+        this.messages = [...this.messages];  // 触发消息列表的响应式更新
+        
+        // 返回完整的ChatGPT响应消息
+        return chatGptMessage;
         
       } catch (error) {
+        // 处理取消错误
         if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
           console.log('请求被用户取消');
           this.isSending = false;
@@ -275,35 +280,64 @@ export const useChatStore = defineStore('chat', {
         throw error;
       }
     },
-
-    // 处理流式数据
-    async processStreamData(data, chatGptReply, currentCodeBlock) {
-      try {
-        // 尝试直接解析数据
-        let content;
-        try {
-          const parsed = JSON.parse(data);
-          if (!parsed.choices || !parsed.choices[0].delta.content) {
-            return '';
-          }
-          content = parsed.choices[0].delta.content;
-        } catch (e) {
-          // 如果解析失败，可能是数据不完整，直接使用原始数据
-          content = data;
+    
+    
+    // 新增：处理发送错误
+    handleSendError(error) {
+      console.log('🚨 处理发送错误:', error);
+      
+      const errorMessage = '抱歉，我现在无法响应。请检查网络连接后重试。';
+      
+      // 移除可能存在的思考中消息
+      if (this.messages.length > 0) {
+        const lastMessage = this.messages[this.messages.length - 1];
+        if (lastMessage.sender === 'chatgpt' && (lastMessage.isThinking || lastMessage.isStreaming || lastMessage.isTyping)) {
+          lastMessage.text = errorMessage;
+          lastMessage.isTyping = false;
+          lastMessage.isStreaming = false;
+          lastMessage.isThinking = false;
+          this.messages = [...this.messages];
+        } else {
+          this.addMessage({ sender: 'chatgpt', text: errorMessage, isTyping: false });
         }
-        
-        // 其他代码保持不变...
-        chatGptReply.text += content;
+      } else {
+        this.addMessage({ sender: 'chatgpt', text: errorMessage, isTyping: false });
+      }
+      
+      // 确保状态重置
+      this.isSending = false;
+      this.currentEventSource = null;
+      this.currentAbortController = null;
+    },
+    
+    /**
+     * 使用打字机效果显示消息的一部分
+     * @param {string} part - 要显示的消息部分
+     * @param {Object} chatGptReply - ChatGPT回复消息对象
+     */
+    async outputMessagePart(part, chatGptReply) {
+      // 初始化缓冲区，用于逐字构建显示的文本
+      let buffer = '';
+
+      // 遍历消息文本的每个字符
+      for (const char of part) {
+        // 将当前字符添加到缓冲区
+        buffer += char;
+
+        // 显示带有光标效果的文本（使用下划线模拟光标）
+        chatGptReply.text = buffer + '_';
+        // 触发Vue的响应式更新，确保UI立即显示新文本
         this.messages = [...this.messages];
-        
-        return content;
-      } catch (e) {
-        console.error('处理数据出错:', e);
-        return '';
+
+        // 等待50毫秒，创造打字机的节奏感
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        // 移除光标，显示纯文本
+        chatGptReply.text = buffer;
+        // 再次触发响应式更新，更新UI显示
+        this.messages = [...this.messages];
       }
     },
-
-
 
     // 创建新会话
     async createNewChat() {

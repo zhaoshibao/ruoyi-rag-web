@@ -28,6 +28,13 @@
         </div>
       </el-popover>
     </div>
+    <!-- 聊天输入区域
+      contenteditable="true" - 使div可编辑，实现输入功能
+      ref="messageInput" - 用于获取输入框DOM引用
+      @input="updateMessage" - 监听输入事件，实时更新message内容
+      @keyup.enter="sendMessage" - 监听回车键事件，触发消息发送
+      :placeholder - 动态显示占位文本，发送时显示"正在发送..."，否则显示"输入消息..."
+    -->
     <div class="input-area"
          contenteditable="true"
          ref="messageInput"
@@ -35,56 +42,42 @@
          @keyup.enter="sendMessage"
          :placeholder="isSending ? '正在发送...' : '输入消息...'">
     </div>
-    <div class="send-icon" :class="isSending?'disabled':''" @click="sendMessage" :disabled="isSending">
+    <div class="send-icon" :class="isSending ?'disabled':''" @click="sendMessage" :disabled="isSending">
       <el-icon><Promotion /></el-icon>
     </div>
   </div>
 </template>
 
-<script>
+<script setup>
 import { Promotion, Search, Connection, ArrowDown } from "@element-plus/icons-vue";
 
 import { useChatStore } from '@/store/chat'; // 引入 chatStore
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
-export default {
-  components: {
-    Promotion,
-    Search,
-    Connection,
-    ArrowDown,
-  },
-  setup() {
-    const useWebSearch = ref(false);
-    return { useWebSearch, Search, Connection, ArrowDown };
-  },
-  data() {
-    return {
-      message: '',
-    };
-  },
-  computed: {
-    isSending() {
-      return useChatStore().isSending; // 从 store 获取状态
-    },
-  },
-  methods: {
-    updateMessage(event) {
-      this.message = event.target.innerText;
-    },
-    sendMessage() {
-      if (this.message.trim() && !this.isSending) { // 判断是否正在发送
-        // 发送消息时同时传递联网搜索状态
-        this.$emit('send', this.message, this.useWebSearch);
-        this.message = '';
-        this.$refs.messageInput.innerText = '';
-      }
-    },
-    toggleWebSearch(value) {
-      this.useWebSearch = value;
-    }
-  },
+const emits = defineEmits(['send']);
+  
+const useWebSearch = ref(false);
+const message = ref('');
+const messageInput = ref(null);
+const isSending = computed(() => useChatStore().isSending);
+const updateMessage = (event) => {
+  message.value = event.target.innerText;
 };
+const sendMessage = () => {
+  if (message.value.trim() && !isSending.value) { // 判断是否正在发送
+    // 发送消息时同时传递联网搜索状态
+    emits('send', message.value, useWebSearch.value);
+    message.value = '';
+    // 清空输入框内容
+    if (messageInput.value) {
+      messageInput.value.innerText = '';
+    }
+  }
+};
+const toggleWebSearch = (value) => {
+  useWebSearch.value = value;
+};
+
 </script>
 
 <style scoped>
