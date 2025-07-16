@@ -177,18 +177,47 @@ export const useChatStore = defineStore('chat', {
           signal: this.currentAbortController.signal
         });
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        // 获取响应的第一个数据块来检查是否有错误
+        const reader = response.body.getReader();
+        const {value, done} = await reader.read();
+        const text = new TextDecoder().decode(value);
+        
+        try {
+          const data = JSON.parse(text);
+          if (data.code === 500) {
+            // 创建错误提示消息
+            const errorMessage = {
+              sender: 'chatgpt',
+              text: `抱歉，出现了一些问题：\n${data.msg || '服务器内部错误'}`,
+              isError: true,
+              id: messageId
+            };
+
+            // 查找并替换思考中的消息
+            const thinkingIndex = this.messages.findIndex(msg => msg.id === messageId);
+            if (thinkingIndex !== -1) {
+              this.messages.splice(thinkingIndex, 1, errorMessage);
+              this.messages = [...this.messages];
+            } else {
+              this.addMessage(errorMessage);
+            }
+
+            // 重置发送状态
+            this.isSending = false;
+            throw new Error(data.msg || '服务器内部错误');
+          }
+        } catch (e) {
+          // 如果解析JSON失败，说明是正常的流式响应
+          console.log('Not JSON response, continuing with stream');
         }
-        console.log('/api/ai/chat-stream response.body', response.body);
         
         // 创建新的回复消息，使用相同的ID
         const chatGptReply = { 
           sender: 'chatgpt', 
-          text: '', 
+          text: text, // 使用已经读取的第一块数据
           isTyping: true,
           isStreaming: true,
-          id: messageId  // 使用相同的ID
+          id: messageId
         };
         
         // 使用ID查找并替换思考中的消息
@@ -201,7 +230,6 @@ export const useChatStore = defineStore('chat', {
           this.addMessage(chatGptReply);
         }
 
-        const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
         let fullMessage = '';
