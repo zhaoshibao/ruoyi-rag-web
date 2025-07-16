@@ -42,14 +42,25 @@
          @keyup.enter="sendMessage"
          :placeholder="isSending ? '正在发送...' : '输入消息...'">
     </div>
-    <div class="send-icon" :class="isSending ?'disabled':''" @click="sendMessage" :disabled="isSending">
-      <el-icon><Promotion /></el-icon>
-    </div>
+    <el-tooltip
+      :content="isSending ? '停止生成' : '发送消息'"
+      placement="top"
+      :hide-after="1000"
+    >
+      <div class="send-icon" :class="{ 'sending': isSending }" @click="handleClick">
+        <el-icon v-if="isSending">
+          <Close  />
+        </el-icon>
+        <el-icon v-else>
+          <Promotion />
+        </el-icon>
+      </div>
+    </el-tooltip>
   </div>
 </template>
 
 <script setup>
-import { Promotion, Search, Connection, ArrowDown } from "@element-plus/icons-vue";
+import { Promotion, Search, Connection, ArrowDown, Close } from "@element-plus/icons-vue";
 
 import { useChatStore } from '@/store/chat'; // 引入 chatStore
 import { ref, computed } from 'vue';
@@ -60,24 +71,32 @@ const useWebSearch = ref(false);
 const message = ref('');
 const messageInput = ref(null);
 const isSending = computed(() => useChatStore().isSending);
+console.log('isSending:', isSending.value);
 const updateMessage = (event) => {
   message.value = event.target.innerText;
 };
-const sendMessage = () => {
-  if (message.value.trim() && !isSending.value) { // 判断是否正在发送
-    // 发送消息时同时传递联网搜索状态
-    emits('send', message.value, useWebSearch.value);
-    message.value = '';
-    // 清空输入框内容
-    if (messageInput.value) {
-      messageInput.value.innerText = '';
-    }
-  }
+const sendMessage = async () => {
+  if (!message.value.trim() || isSending.value) return;
+  
+  console.log('发送消息:', message.value);
+  emits('send', message.value, useWebSearch.value);
+  messageInput.value.innerText = '';
+  message.value = '';
 };
 const toggleWebSearch = (value) => {
   useWebSearch.value = value;
 };
 
+const handleClick = () => {
+  console.log('handleClick - isSending:', isSending.value);
+  if (isSending.value) { 
+    console.log('停止生成');
+    useChatStore().stopCurrentSSE();
+  } else {
+    console.log('发送消息');
+    sendMessage();
+  }
+};
 </script>
 
 <style scoped>
@@ -170,32 +189,33 @@ const toggleWebSearch = (value) => {
 }
 
 .send-icon {
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
   position: absolute;
   right: 10px;
-  cursor: pointer;
-  font-size: 24px;
-  padding: 8px;
-  background-color: #409EFF;
-  border-radius: 50%;
-  color: #fff;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.send-icon .el-icon {
+  font-size: 24px; /* 增加图标大小 */
+  width: 1em;
+  height: 1em;
 }
 
 .send-icon:hover {
-  background-color: #66b1ff;
-  transform: scale(1.1);
+  background-color: var(--el-color-primary-light-8);
 }
 
-.send-icon.disabled {
-  background-color: #ccc;
+.send-icon.sending {
+  color: var(--el-color-danger);
 }
-.send-icon.disabled:hover {
-  background-color: #ccc;
-  transform: scale(1);
-}
-.send-icon:active {
-  background-color: #3a8ee6;
-  transform: scale(1);
+
+.send-icon.sending:hover {
+  background-color: var(--el-color-danger-light-8);
 }
 
 /* 自定义弹出框样式 */

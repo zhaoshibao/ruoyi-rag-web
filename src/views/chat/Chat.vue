@@ -22,21 +22,11 @@
               <model-select />
             </template>
           </chat-input>
-          <!-- <div class="mode-switch">
-            <el-switch
-              v-model="useSSEMode"
-              @change="handleModeChange"
-              active-text="流式"
-              inactive-text="普通"
-              size="small"
-            />
+          <!-- <div v-if="chatStore.isSending" class="stop-button">
+            <el-button @click="stopSending" type="danger" :icon="Close" circle>
+              停止生成
+            </el-button>
           </div> -->
-        </div>
-        <div v-if="chatStore.isSending" class="sending-controls">
-          <el-button @click="stopSending" type="danger" size="small">
-            <el-icon><Close /></el-icon>
-            停止生成
-          </el-button>
         </div>
       </el-footer>
     </el-container>
@@ -206,16 +196,21 @@
   width: 100%;
   max-width: 1000px;
   margin-bottom: 60px; /* 减小底部边距 */
+  position: relative; /* 添加相对定位 */
 }
 
-.mode-switch {
+.stop-button {
+  position: absolute;
+  right: -70px; /* 调整按钮位置 */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.stop-button .el-button {
+  padding: 8px 16px;
   display: flex;
   align-items: center;
-  flex-shrink: 0;
-}
-
-.sending-controls {
-  margin-top: 10px;
+  gap: 4px;
 }
 
 .collapse-button {

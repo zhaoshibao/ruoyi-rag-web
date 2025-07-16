@@ -6,36 +6,87 @@
           <User />
         </el-icon>
         <el-icon v-else>
-          <!-- <img v-if="message.text == '努力思考中，请稍后'" src="../assets/loading.gif" alt="" width="70px"
-            style="background-color: transparent;"> -->
-
           <Service/>
         </el-icon>
       </div>
-      <!-- <div :class="message.sender === 'user' ? 'askContent' : 'answerContent'" v-html="message.text">
-      </div> -->
-      <MdPreview  ref="editorRef"
-        editorId="preview-only"
-        previewTheme="github"
-        :showCodeRowNumber="false"
-        :modelValue="message.text"
-        :key="message.id"
+      <div class="message-wrapper">
+        <MdPreview ref="editorRef"
+          editorId="preview-only"
+          previewTheme="github"
+          :showCodeRowNumber="false"
+          :modelValue="message.text"
+          :key="message.id"
         />
-
-      <span v-if="message.isTyping" class="cursor">_</span>
+        <div class="message-actions">
+          <el-tooltip
+            content="复制内容"
+            placement="top"
+            :hide-after="1000"
+          >
+            <el-button type="text" @click="copyMessage(message.text)">
+              <el-icon><DocumentCopy /></el-icon>
+            </el-button>
+          </el-tooltip>
+          <el-tooltip
+            v-if="message.sender === 'chatgpt'"
+            content="重新生成"
+            placement="top"
+            :hide-after="1000"
+          >
+            <el-button type="text" @click="regenerateMessage(message, index)">
+              <el-icon><RefreshRight /></el-icon>
+            </el-button>
+          </el-tooltip>
+        </div>
+        <span v-if="message.isTyping" class="cursor">_</span>
+      </div>
     </li>
   </ul>
 </template>
 
 <script setup>
 import { onMounted, watch, ref, nextTick, onBeforeUnmount } from "vue";
-
-import { MdPreview } from 'md-editor-v3'
+import { MdPreview } from 'md-editor-v3';
+import { DocumentCopy, RefreshRight, User, Service } from '@element-plus/icons-vue';
+import { ElMessage } from 'element-plus';
+import { useChatStore } from '@/store/chat';
 import 'md-editor-v3/lib/preview.css';
 
 const messageListRef = ref(null);
 const props = defineProps(["messages"]);
 const shouldAutoScroll = ref(true);
+const chatStore = useChatStore();
+
+// 复制消息内容
+const copyMessage = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    ElMessage.success('复制成功');
+  } catch (err) {
+    console.error('复制失败:', err);
+    ElMessage.error('复制失败');
+  }
+};
+
+// 重新生成消息
+const regenerateMessage = async (message, index) => {
+  if (chatStore.isSending) {
+    ElMessage.warning('请等待当前消息生成完成');
+    return;
+  }
+  
+  // 获取上一条用户消息
+  const userMessage = props.messages.slice(0, index).reverse()
+    .find(msg => msg.sender === 'user');
+    
+  if (userMessage) {
+    // 重新发送用户消息
+    await chatStore.sendMessageToChatGPT({
+      msg: userMessage.text,
+      useWebSearch: false
+    });
+  }
+};
 
 const scrollToBottom = async () => {
   if (messageListRef.value && shouldAutoScroll.value) {
@@ -172,7 +223,6 @@ li.answer {
   }
 }
 
-
 .message-md .md-editor-preview-wrapper {
   color: var(--gray-900);
   max-width: 100%;
@@ -195,14 +245,6 @@ li.answer {
     font-size: 1rem;
   }
 
-  // li > p, ol > p, ul > p {
-  //   margin: 0.25rem 0;
-  // }
-
-  // ol, ul {
-  //   padding-left: 1rem;
-  // }
-
   a {
     color: var(--main-700);
   }
@@ -216,5 +258,44 @@ li.answer {
     -moz-tab-size: 4;
     background-color: var(--gray-100);
   }
+}
+
+.message-wrapper {
+  position: relative;
+  flex: 1;
+  max-width: 80%;
+}
+
+.message-actions {
+  display: none;
+  position: absolute;
+  bottom: -30px;
+  padding: 4px 8px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 1;
+}
+
+li.ask:hover .message-actions,
+li.answer:hover .message-actions {
+  display: flex;
+  gap: 8px;
+}
+
+li.ask .message-actions {
+  right: 0; /* 用户消息的操作按钮靠右对齐 */
+}
+
+li.answer .message-actions {
+  left: 0; /* AI消息的操作按钮靠左对齐 */
+}
+
+.message-actions .el-button {
+  padding: 4px 8px;
+}
+
+.message-actions .el-icon {
+  font-size: 16px;
 }
 </style>
