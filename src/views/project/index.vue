@@ -28,7 +28,6 @@
     <!-- 项目列表 -->
     <el-table v-loading="loading" :data="projectList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="50" align="center" />
-      <el-table-column label="项目编号" align="center" prop="projectId" width="80" />
       <el-table-column label="项目名称" align="center" prop="projectName" width="120" />
       <el-table-column label="模型类型" align="center" prop="type" width="100" />
       <el-table-column label="具体模型" align="center" prop="model" width="150" />
@@ -47,13 +46,13 @@
           </el-tooltip>
         </template>
       </el-table-column>
-      <el-table-column label="系统提示词" align="center" prop="systemPrompt" width="300">
+      <!-- <el-table-column label="系统提示词" align="center" prop="systemPrompt" width="300">
         <template #default="scope">
           <el-tooltip class="item" effect="dark" :content="scope.row.systemPrompt" placement="top-start">
             <div class="ellipsis-text">{{ scope.row.systemPrompt }}</div>
           </el-tooltip>
         </template>
-      </el-table-column>
+      </el-table-column> -->
        <el-table-column label="PDF增强解析" align="center" prop="pdfAnalysis" width="120">
         <template #default="scope">
             <span v-if="scope.row.pdfAnalysis == 1">是</span>
@@ -66,10 +65,12 @@
         </template>
       </el-table-column>
     
-      <el-table-column label="操作" align="center"  class-name="small-padding fixed-width">
+      <el-table-column label="操作" align="center"  class-name="small-padding fixed-width" >
         <template #default="scope">
           <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)">修改</el-button>
           <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" >删除</el-button>
+           <el-button link type="primary" icon="Upload" @click="handleUpload(scope.row)">上传知识库</el-button>
+           <el-button link type="primary" icon="Share" @click="handleKnowledgeGraph(scope.row)">查看知识图谱</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -123,13 +124,53 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 上传知识库 -->
+    <el-dialog title="上传知识库" v-model="acknowledgeOpen" width="550px" append-to-body>
+      <el-form ref="uploadForm" :model="fileData" :rules="rules" label-width="120px">
+      
+        <el-form-item label="文件上传" prop="fileUpload">
+          <el-upload
+            ref="upload"
+            class="upload-demo"
+            :action="fileUploadUrl"
+            :headers="fileUploadHeaders"
+            :data="fileData"
+            :on-success="handleSuccess"
+            :before-remove="handleRemoveFile"
+            :before-upload="beforeUpload"
+            :on-remove="handleRemove"
+            name="file"
+            multiple
+            :file-list="fileList">
+            <el-button size="small" type="primary">点击上传</el-button>
+            <div class="el-upload__tip">如果需要查看文件详情，请移步知识库管理</div>
+          </el-upload>
+        </el-form-item>
+        <el-form-item label="开启知识图谱" prop="isKnowledgeGraph">
+          <el-switch v-model="fileData.isKnowledgeGraph" :active-value="1" :inactive-value="0" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button type="primary" @click="closeForm">确 定</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+      <!-- 知识图谱对话框 -->
+      <el-dialog :title="'知识图谱 - ' + graphTitle" v-model="graphVisible" width="90%" append-to-body>
+          <knowledge-graph ref="knowledgeGraph" :projectId="currentProjectId"/>
+      </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { listProject, getProject, addProject, updateProject, delProject } from '@/api/project/project'
+import { listProject, getProject, addProject, updateProject, delProject ,removeFile} from '@/api/project/project'
 import { parseTime } from '@/utils/ruoyi'
+import { getToken } from "@/utils/auth";
+import KnowledgeGraph from '@/components/project/KnowledgeGraph.vue'
 
 const { proxy } = getCurrentInstance()
 
@@ -199,6 +240,27 @@ const rules = ref({
       baseUrl: [
         { required: true, message: "请输入基础url", trigger: "blur" }
       ],
+})
+
+
+
+const fileUploadUrl =  import.meta.env.VITE_APP_BASE_API  + '/chat/knowledge/upload'
+const fileUploadHeaders = {Authorization: 'Bearer ' + getToken()}
+const acknowledgeOpen = ref(false)
+const fileData = ref({
+  projectId: undefined,
+  isKnowledgeGraph: 0 // 默认关闭知识图谱
+})
+
+const fileList = ref([])
+
+// 知识图谱对话框
+const graphVisible = ref(false)
+const graphTitle = ref("")
+const currentProjectId = ref(null)
+
+onMounted(() => {
+  getList()
 })
 
 /** 查询项目列表 */
@@ -301,10 +363,67 @@ function handleDelete(row) {
   })
 }
 
+/** 上传知识库 */
+function handleUpload(row) {
+  fileData.value = {
+    projectId: row.projectId || ids.value,
+    isKnowledgeGraph: 0 // 默认关闭知识图谱
+  };
+  fileList.value = []; // 打开弹窗前清空文件列表
+  acknowledgeOpen.value = true
+}
 
-onMounted(() => {
-  getList()
-})
+function beforeUpload(file) {
+    // 在上传前确保isKnowledgeGraph有值
+    return true;
+}
+
+function handleSuccess(res, file){
+    if (res.code === 200) {
+      fileList.value.push({ id: res.data, name: file.name});
+      proxy.$modal.msgSuccess("文件上传成功");
+    } else {
+      proxy.$modal.msgError("文件上传失败");
+    }
+}
+
+function handleRemoveFile(file) {
+  let removeFileData = {knowledgeId: file.id, projectId: fileData.value.projectId};
+  return removeFile(removeFileData).then(response => {
+    if (response.code === 200) {
+      proxy.$modal.msgSuccess('文件删除成功');
+      return true;
+    }
+    proxy.$modal.msgError('文件删除失败');
+    return false;
+  });
+}
+
+function handleRemove(file, fileList) {
+  fileList.value = fileList;
+}
+function closeForm() {
+  proxy.$refs.uploadForm.resetFields(); // 重置表单
+  fileList.value = []; // 清空文件列表
+  // 创建新的对象来重置状态
+  fileData.value = {
+    projectId: fileData.value.projectId,
+    isKnowledgeGraph: 0
+  };
+  acknowledgeOpen.value = false;
+}
+
+ /** 查看知识图谱按钮操作 */
+function handleKnowledgeGraph(row) {
+  graphTitle.value = row.projectName;
+  currentProjectId.value = row.projectId;
+  graphVisible.value = true;
+  // 等待对话框打开后再初始化图谱
+  proxy.$nextTick(() => {
+    proxy.$refs.knowledgeGraph.loadGraphData();
+  });
+}
+
 
 
 </script>
