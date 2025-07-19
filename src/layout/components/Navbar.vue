@@ -95,7 +95,7 @@ function logout() {
     type: 'warning'
   }).then(() => {
     userStore.logOut().then(() => {
-      location.href = '/admin/index'
+      location.href = '/web/index'
     })
   }).catch(() => { })
 }
