@@ -36,9 +36,13 @@
         </div>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item command="settings">
+            <el-dropdown-item command="git">
+              <svg-icon icon-class="github"/>&nbsp;源码地址
+            </el-dropdown-item>
+            <el-dropdown-item divided command="settings">
               <el-icon><Setting /></el-icon>个人设置
             </el-dropdown-item>
+           
             <el-dropdown-item divided command="logout">
               <el-icon><SwitchButton /></el-icon>退出登录
             </el-dropdown-item>
@@ -51,6 +55,7 @@
 </template>
 
 <script setup>
+import { ElMessageBox } from 'element-plus'
 import Logo from './Logo'
 import SidebarItem from './SidebarItem'
 import variables from '@/assets/styles/variables.module.scss'
@@ -61,11 +66,12 @@ import { Setting, SwitchButton } from '@element-plus/icons-vue'
 import useUserStore from '@/store/modules/user'
 import UserProfileDialog from '@/components/UserProfile/UserProfileDialog.vue'
 import { ChatLineRound, Folder, Files } from '@element-plus/icons-vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 
 const router = useRouter()
 const route = useRoute()
 const appStore = useAppStore()
+
 const settingsStore = useSettingsStore()
 const permissionStore = usePermissionStore()
 
@@ -105,11 +111,26 @@ const showProfileDialog = ref(false)
 // 处理下拉菜单命令
 const handleCommand = (command) => {
   if (command === 'settings') {
-    showProfileDialog.value = true
+    router.push('/user/profile')
   } else if (command === 'logout') {
-    // 退出登录
-    userStore.logout()
+    // 处理登出逻辑
+    logout()
+  } else if (command === 'git') {
+    window.open('https://github.com/zhaoshibao/ruoyi-rag')
   }
+}
+
+
+function logout() {
+  ElMessageBox.confirm('确定注销并退出系统吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    userStore.logOut().then(() => {
+      location.href = '/web/index'
+    })
+  }).catch(() => { })
 }
 </script>
 
