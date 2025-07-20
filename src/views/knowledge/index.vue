@@ -360,14 +360,16 @@ function submitForm() {
 /** 删除按钮操作 */
 function handleDelete(row) {
   console.log(row)
+  const fileName = row.fileName
   const knowledgeData = {knowledgeId: row.knowledgeId, projectId: row.projectId};
-  proxy.$modal.confirm('是否确认删除知识库编号为"' + knowledgeData.knowledgeId + '"的数据项？').then(function() {
+  proxy.$modal.confirm('是否确认删除文件名称为"' + fileName + '"的数据项？').then(function() {
     return delKnowledge(knowledgeData);
   }).then(() => {
-    getList();
-    proxy.$modal.msgSuccess("删除成功");
-  }).catch(() => {});
+    getList()
+    proxy.$modal.msgSuccess("删除成功")
+  }).catch(() => {})
 }
+
 
 </script>
 
