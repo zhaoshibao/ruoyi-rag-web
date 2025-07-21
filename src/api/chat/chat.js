@@ -1,5 +1,5 @@
 import axios from 'axios';
-
+import request from '@/utils/request'
 //创建 MockAdapter 实例
 // const mock = new MockAdapter(axios);
 
@@ -319,12 +319,20 @@ export const sendMessageWithSSE = (queryVo, onMessage, onError, onComplete) => {
 
 // 创建新的会话
 export const createChat = (chatVo) => {
-  return axios.post('/api/ai/create-chat', chatVo);
+  return request({
+    url: '/ai/create-chat',
+    method: 'post',
+    data: chatVo
+  });
 };
 
 // 修改会话标题
 export const updateChat = (chatVo) => {
-  return axios.post('/api/ai/update-chat', chatVo);
+  return request({
+    url: '/ai/update-chat',
+    method: 'post',
+    data: chatVo
+  });
 };
 
 // 保存消息
@@ -338,33 +346,46 @@ export const saveMessage = (messageVo, abortController = null) => {
   if (abortController) {
     config.signal = abortController.signal;
   }
-  return axios.post('/api/ai/save-msg', messageVo, config);
+  return request({
+    url: '/ai/save-msg',
+    method: 'post',
+    data: messageVo,
+    ...config
+  });
 };
 // 查询会话列表
-export const listChats = (projectId, userId) => {
-  return axios.get('/api/ai/list-chat', {
-    params: { projectId, userId },
-  });
+export const listChats = (projectId) => {
+  return request({
+     url: '/ai/list-chat',
+     method: 'get',
+     params: { projectId }
+   })
 };
 
 // 查询会话中的消息
 export const listMessages = (chatId) => {
-  return axios.get('/api/ai/list-msg', {
-    params: { chatId },
+  return request({
+    url: '/ai/list-msg',
+    method: 'get',
+    params: { chatId }
   });
 };
 
 // 删除会话
 export const deleteChat = (projectId, chatId) => {
-  return axios.get('/api/ai/delete-chat', {
-    params: { projectId, chatId },
+  return request({
+    url: '/ai/delete-chat',
+    method: 'get',
+    params: { projectId, chatId }
   });
 };
 
 // 模型列表
 export const fetchProjects = async () => {
-  const response = await axios.get('/api/chat/project');
-  return response.data; // 假设返回的数据是项目列表
+  return request({
+    url: '/chat/project/list',
+    method: 'get'
+  });
 };
 
 // 发送消息到 ChatGPT（SSE流式）

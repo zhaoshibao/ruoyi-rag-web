@@ -65,6 +65,18 @@ export default {
     const projectId = ref(chatStore.projectId);
     const chatId = ref(chatStore.chatId);
 
+    const fetchChats = async () => {
+      try {
+        await chatStore.fetchChatList(projectId.value);
+        if (chats.value.length > 0) {
+          activeMenu.value = chats.value[0].chatId; // 默认选择第一个会话
+          chatStore.fetchMessages(activeMenu.value);
+        }
+      } catch (error) {
+        console.error("获取会话列表失败:", error);
+      }
+    };
+
     // 监听 chatStore 的 chatList 变化
     watch(() => chatStore.chatList, (newChatList) => {
       chats.value = newChatList;
@@ -72,6 +84,14 @@ export default {
         activeMenu.value = newChatList[0].chatId;
       }
     });
+
+    // 监听 projectId 的变化
+    watch(() => chatStore.projectId, (newProjectId) => {
+      if (newProjectId) {
+        projectId.value = newProjectId;
+        fetchChats();
+      }
+    }, { immediate: true });
 
     const groupedChats = computed(() => {
       const groups = {};
@@ -102,17 +122,7 @@ export default {
       emit('toggle-sidebar', isHidden.value);
     };
 
-    const fetchChats = async () => {
-      try {
-        await chatStore.fetchChatList();
-        if (chats.value.length > 0) {
-          activeMenu.value = chats.value[0].chatId; // 默认选择第一个会话
-          chatStore.fetchMessages(activeMenu.value);
-        }
-      } catch (error) {
-        console.error("获取会话列表失败:", error);
-      }
-    };
+
 
     const selectMenu = async (chatId) => {
       activeMenu.value = chatId;
@@ -142,6 +152,7 @@ export default {
 
     const deleteChat = async (chat) => {
       try {
+        console.log("删除会话:", chat.chatId);
         await deleteChatApi(projectId.value, chat.chatId);
         chats.value = chats.value.filter((c) => c.chatId !== chat.chatId);
         if (chats.value.length > 0) {

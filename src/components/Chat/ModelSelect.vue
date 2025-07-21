@@ -30,60 +30,52 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { useChatStore } from '@/store/chat';
 import { ref, onMounted } from 'vue';
 import { fetchProjects } from '@/api/chat/chat'; // 导入获取项目的函数
 
-export default {
-  name: "ModelSelect",
-  setup() {
-    const chatStore = useChatStore(); // 获取 chatStore
-    const showModelBox = ref(false);
-    const models = ref([]); // 存储模型列表
-    const selectedModel = ref('AI医生'); // 默认选择第一个模型
+  const chatStore = useChatStore(); // 获取 chatStore
+  const showModelBox = ref(false);
+  const models = ref([]); // 存储模型列表
+  const selectedModel = ref(''); // 默认选择第一个模型
 
-    // 切换模型选择框显示状态
-    const toggleModelBox = () => {
-      showModelBox.value = !showModelBox.value;
-    };
+  // 切换模型选择框显示状态
+  const toggleModelBox = () => {
+    showModelBox.value = !showModelBox.value;
+  };
 
-    // 选择模型
-    const selectModel = (model) => {
-      selectedModel.value = model.projectName;
-      chatStore.projectId = model.projectId; // 设置 projectId
-      showModelBox.value = false; // 选择后隐藏模型框
-      console.log(`Selected model: ${selectedModel.value}, Project ID: ${chatStore.projectId}`);
-    };
+  // 选择模型
+  const selectModel = (model) => {
+    selectedModel.value = model.projectName;
+    chatStore.projectId = model.projectId; // 设置 projectId
+    showModelBox.value = false; // 选择后隐藏模型框
+    console.log(`Selected model: ${selectedModel.value}, Project ID: ${chatStore.projectId}`);
+  };
 
-    // 获取模型列表
-    const getModels = async () => {
-      try {
-        const response = await fetchProjects(); // 获取项目数据
-        if (response.code === 200) {
-          models.value = response.rows; // 从返回数据中获取模型数组
-        } else {
-          console.error('获取模型失败:', response.msg);
+  // 获取模型列表
+  const getModels = async () => {
+    try {
+      const response = await fetchProjects(); // 获取项目数据
+      if (response.code === 200) {
+        models.value = response.rows; // 从返回数据中获取模型数组
+        if (models.value.length > 0) {
+          selectedModel.value = models.value[0].projectName;
+          chatStore.projectId = models.value[0].projectId;
         }
-      } catch (error) {
-        console.error('获取模型失败:', error);
+      } else {
+        console.error('获取模型失败:', response.msg);
       }
-    };
+    } catch (error) {
+      console.error('获取模型失败:', error);
+    }
+  };
 
-    // 组件挂载后获取模型列表
-    onMounted(() => {
-      getModels();
-    });
+  // 组件挂载后获取模型列表
+  onMounted(() => {
+    getModels();
+  });
 
-    return {
-      showModelBox,
-      models,
-      selectedModel,
-      toggleModelBox,
-      selectModel,
-    };
-  },
-};
 </script>
 
 <style scoped>
