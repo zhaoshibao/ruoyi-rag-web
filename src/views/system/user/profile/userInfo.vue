@@ -9,12 +9,12 @@
       <el-form-item label="邮箱" prop="email">
          <el-input v-model="form.email" maxlength="50" />
       </el-form-item>
-      <el-form-item label="性别">
+      <!-- <el-form-item label="性别">
          <el-radio-group v-model="form.sex">
             <el-radio value="0">男</el-radio>
             <el-radio value="1">女</el-radio>
          </el-radio-group>
-      </el-form-item>
+      </el-form-item> -->
       <el-form-item>
       <el-button type="primary" @click="submit">保存</el-button>
       <el-button type="danger" @click="close">关闭</el-button>
