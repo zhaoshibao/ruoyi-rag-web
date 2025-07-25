@@ -28,18 +28,18 @@
     <!-- 项目列表 -->
     <el-table v-loading="loading" :data="projectList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="50" align="center" />
-      <el-table-column label="项目名称" align="center" prop="projectName" width="120" />
-      <el-table-column label="模型类型" align="center" prop="type" width="100" />
-      <el-table-column label="具体模型" align="center" prop="model" width="150" />
-      <el-table-column label="嵌入模型" align="center" prop="embeddingModel" width="150" />
-      <el-table-column label="基础url" align="center" prop="baseUrl" width="150">
+      <el-table-column label="项目名称" align="center" prop="projectName" width="150" />
+      <el-table-column label="模型类型" align="center" prop="type" width="150" />
+      <el-table-column label="具体模型" align="center" prop="model" width="180" />
+      <!-- <el-table-column label="嵌入模型" align="center" prop="embeddingModel" width="150" /> -->
+      <el-table-column label="基础url" align="center" prop="baseUrl" width="280">
         <template #default="scope">
           <el-tooltip class="item" effect="dark" :content="scope.row.baseUrl" placement="top">
             <div class="ellipsis-text">{{ scope.row.baseUrl }}</div>
           </el-tooltip>
         </template>
       </el-table-column>
-      <el-table-column label="apiKey" align="center" prop="apiKey" width="120">
+      <el-table-column label="apiKey" align="center" prop="apiKey" width="280">
         <template #default="scope">
           <el-tooltip class="item" effect="dark" :content="scope.row.apiKey" placement="top">
             <div class="ellipsis-text">{{ scope.row.apiKey }}</div>
@@ -100,9 +100,9 @@
         <el-form-item label="具体模型" prop="model">
            <el-input v-model="form.model" placeholder="请输入具体模型" />
         </el-form-item>
-          <el-form-item label="嵌入模型" prop="embeddingModel">
+          <!-- <el-form-item label="嵌入模型" prop="embeddingModel">
            <el-input v-model="form.embeddingModel" placeholder="请输入嵌入模型" />
-        </el-form-item>
+        </el-form-item> -->
          <el-form-item label="基础url" prop="baseUrl">
            <el-input v-model="form.baseUrl" placeholder="请输入基础url" />
         </el-form-item>
