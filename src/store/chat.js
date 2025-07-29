@@ -65,6 +65,7 @@ export const useChatStore = defineStore('chat', {
     // 选择会话，切换当前会话
     async selectChat(chatId) {
       this.chatId = chatId;
+      console.log('选择会话:', chatId);
       await this.fetchMessages(chatId); // 加载选中会话的消息
     },
 
@@ -362,9 +363,9 @@ export const useChatStore = defineStore('chat', {
           title: '新会话' + Math.random().toString(36).substring(2, 7),
         });
         this.messages = [];
-        this.chatId = response.data;
+        this.chatId = response;
+        console.log('创建新会话:', this.chatId);
         //this.chatId = BigInt(response.data).toString()
-        console.log(this.chatId);
         
         
         await this.fetchChatList(this.projectId); // 创建新会话后更新会话列表
