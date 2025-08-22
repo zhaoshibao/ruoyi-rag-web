@@ -28,6 +28,11 @@
           <el-icon><Picture /></el-icon>
           <template #title>图片生成</template>
         </el-menu-item>
+        <el-menu-item index="/summarizer/index">
+          <el-icon><Document /></el-icon>
+          <template #title>文档总结</template>
+        </el-menu-item>
+
       </el-menu>
     </div>
     

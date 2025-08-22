@@ -119,6 +119,19 @@ export const constantRoutes = [
     }
   ]
 },
+{
+  path: '/summarizer',
+  component: Layout,
+  children: [
+    {
+      path: 'index',
+      component: () => import('@/views/summarizer/index.vue'),
+      name: 'Summarizer',
+      meta: { title: '文档总结', icon: 'document' }
+    }
+  ]
+},
+
 
 
 {
