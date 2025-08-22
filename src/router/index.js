@@ -108,6 +108,20 @@ export const constantRoutes = [
   ]
 },
 {
+  path: '/image',
+  component: Layout,
+  children: [
+    {
+      path: 'index',
+      component: () => import('@/views/image/index.vue'),
+      name: 'Image',
+      meta: { title: '图片生成', icon: 'image' }
+    }
+  ]
+},
+
+
+{
   path: '/chat',
    component: Layout,
    children: [

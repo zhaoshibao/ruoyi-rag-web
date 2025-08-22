@@ -24,6 +24,10 @@
           <el-icon><Files /></el-icon>
           <template #title>知识库管理</template>
         </el-menu-item>
+         <el-menu-item index="/image/index">
+          <el-icon><Picture /></el-icon>
+          <template #title>图片生成</template>
+        </el-menu-item>
       </el-menu>
     </div>
     
